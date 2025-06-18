@@ -1,0 +1,1233 @@
+{
+	"info": {
+		"_postman_id": "memex-api-collection",
+		"name": "Memex Backend API",
+		"description": "Complete API collection for Memex bonding curve system on Abstract L2 blockchain",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:5000",
+			"type": "string"
+		},
+		{
+			"key": "admin_password",
+			"value": "your_admin_password_here",
+			"type": "string"
+		},
+		{
+			"key": "sample_token_address",
+			"value": "0x1234567890123456789012345678901234567890",
+			"type": "string"
+		},
+		{
+			"key": "sample_user_address",
+			"value": "0x9876543210987654321098765432109876543210",
+			"type": "string"
+		},
+		{
+			"key": "sample_tx_hash",
+			"value": "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "👤 User Endpoints",
+			"item": [
+				{
+					"name": "Get Deployment Fee",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/user/deployment-fee",
+							"host": ["{{base_url}}"],
+							"path": ["user", "deployment-fee"]
+						}
+					}
+				},
+				{
+					"name": "Get Bonding Curve Settings",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/user/settings",
+							"host": ["{{base_url}}"],
+							"path": ["user", "settings"]
+						}
+					}
+				},
+				{
+					"name": "Deploy New Token",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							              "raw": "{\n  \"name\": \"My Token\",\n  \"symbol\": \"MTK\",\n  \"description\": \"A test token for demonstration\",\n  \"privateKey\": \"dfd5d6d422cdbe9503c8ffbff1eb88dabc9ed9fec5d89ac87dfb68ab51547cc4\",\n  \"image\": \"https://example.com/token-logo.png\",\n  \"website\": \"https://mytoken.com\",\n  \"twitter\": \"@mytoken\",\n  \"telegram\": \"@mytokengroup\",\n  \"tags\": [\"defi\", \"test\"]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/user/deploy-token",
+							"host": ["{{base_url}}"],
+							"path": ["user", "deploy-token"]
+						}
+					}
+				},
+				{
+					"name": "Get Token Information",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/user/tokens/{{sample_token_address}}",
+							"host": ["{{base_url}}"],
+							"path": ["user", "tokens", "{{sample_token_address}}"]
+						}
+					}
+				},
+				{
+					"name": "Get User Contribution for Token",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/user/tokens/{{sample_token_address}}/contribution/{{sample_user_address}}",
+							"host": ["{{base_url}}"],
+							"path": ["user", "tokens", "{{sample_token_address}}", "contribution", "{{sample_user_address}}"]
+						}
+					}
+				},
+				{
+					"name": "Get User's Tokens",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/user/my-tokens/{{sample_user_address}}",
+							"host": ["{{base_url}}"],
+							"path": ["user", "my-tokens", "{{sample_user_address}}"]
+						}
+					}
+				},
+				{
+					"name": "Update Token Metadata",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"description\": \"Updated token description\",\n  \"website\": \"https://mytoken.com\",\n  \"twitter\": \"@mytoken_updated\",\n  \"telegram\": \"@mytokengroup\",\n  \"image\": \"https://example.com/new-logo.png\",\n  \"tags\": [\"defi\", \"updated\"]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/user/tokens/{{sample_token_address}}/metadata",
+							"host": ["{{base_url}}"],
+							"path": ["user", "tokens", "{{sample_token_address}}", "metadata"]
+						}
+					}
+				},
+				{
+					"name": "Validate Ethereum Address",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/user/validate-address/{{sample_token_address}}",
+							"host": ["{{base_url}}"],
+							"path": ["user", "validate-address", "{{sample_token_address}}"]
+						}
+					}
+				},
+				{
+					"name": "Get Transaction Details",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/user/transaction/{{sample_tx_hash}}",
+							"host": ["{{base_url}}"],
+							"path": ["user", "transaction", "{{sample_tx_hash}}"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "🏭 Factory Endpoints",
+			"item": [
+				{
+					"name": "Get Factory Information",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/factory/info",
+							"host": ["{{base_url}}"],
+							"path": ["factory", "info"]
+						}
+					}
+				},
+				{
+					"name": "Get Factory Statistics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/factory/stats",
+							"host": ["{{base_url}}"],
+							"path": ["factory", "stats"]
+						}
+					}
+				},
+				{
+					"name": "Get Recent Deployments",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/factory/recent-deployments?limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["factory", "recent-deployments"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Top Performing Tokens",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/factory/top-performers?limit=5&sortBy=volume",
+							"host": ["{{base_url}}"],
+							"path": ["factory", "top-performers"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "5"
+								},
+								{
+									"key": "sortBy",
+									"value": "volume"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Featured Tokens",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/factory/featured-tokens?limit=6",
+							"host": ["{{base_url}}"],
+							"path": ["factory", "featured-tokens"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "6"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Tokens by Phase",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/factory/tokens-by-phase?phase=0&limit=10&offset=0",
+							"host": ["{{base_url}}"],
+							"path": ["factory", "tokens-by-phase"],
+							"query": [
+								{
+									"key": "phase",
+									"value": "0",
+									"description": "0=PreBonding, 1=Bonding, 2=Finalized"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "offset",
+									"value": "0"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Search Tokens",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/factory/search?q=bitcoin&limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["factory", "search"],
+							"query": [
+								{
+									"key": "q",
+									"value": "bitcoin"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Available Tags",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/factory/tags",
+							"host": ["{{base_url}}"],
+							"path": ["factory", "tags"]
+						}
+					}
+				},
+				{
+					"name": "Get Tokens by Tag",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/factory/tokens-by-tag/defi?limit=10&offset=0",
+							"host": ["{{base_url}}"],
+							"path": ["factory", "tokens-by-tag", "defi"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "offset",
+									"value": "0"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "📈 Token Endpoints",
+			"item": [
+				{
+					"name": "Get All Tokens",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/token/?page=1&limit=20&sortBy=createdAt&sortOrder=desc",
+							"host": ["{{base_url}}"],
+							"path": ["token", ""],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								},
+								{
+									"key": "sortBy",
+									"value": "createdAt"
+								},
+								{
+									"key": "sortOrder",
+									"value": "desc"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Token Details",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/token/{{sample_token_address}}",
+							"host": ["{{base_url}}"],
+							"path": ["token", "{{sample_token_address}}"]
+						}
+					}
+				},
+				{
+					"name": "Get Token Statistics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/token/{{sample_token_address}}/stats",
+							"host": ["{{base_url}}"],
+							"path": ["token", "{{sample_token_address}}", "stats"]
+						}
+					}
+				},
+				{
+					"name": "Get Token Holders",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/token/{{sample_token_address}}/holders?page=1&limit=50",
+							"host": ["{{base_url}}"],
+							"path": ["token", "{{sample_token_address}}", "holders"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "50"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Token Price History",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/token/{{sample_token_address}}/price-history?timeframe=24h&interval=1h",
+							"host": ["{{base_url}}"],
+							"path": ["token", "{{sample_token_address}}", "price-history"],
+							"query": [
+								{
+									"key": "timeframe",
+									"value": "24h"
+								},
+								{
+									"key": "interval",
+									"value": "1h"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Trending Tokens",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/token/trending?limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["token", "trending"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Top Gainers",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/token/gainers?limit=10&timeframe=24h",
+							"host": ["{{base_url}}"],
+							"path": ["token", "gainers"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "timeframe",
+									"value": "24h"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Top Losers",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/token/losers?limit=10&timeframe=24h",
+							"host": ["{{base_url}}"],
+							"path": ["token", "losers"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "timeframe",
+									"value": "24h"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Newest Tokens",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/token/new?limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["token", "new"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "🌊 Bonding Curve Endpoints",
+			"item": [
+				{
+					"name": "Get Bonding Curve Information",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/bonding-curve/{{sample_token_address}}",
+							"host": ["{{base_url}}"],
+							"path": ["bonding-curve", "{{sample_token_address}}"]
+						}
+					}
+				},
+				{
+					"name": "Get Current Phase",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/bonding-curve/{{sample_token_address}}/phase",
+							"host": ["{{base_url}}"],
+							"path": ["bonding-curve", "{{sample_token_address}}", "phase"]
+						}
+					}
+				},
+				{
+					"name": "Get Current Reserves",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/bonding-curve/{{sample_token_address}}/reserves",
+							"host": ["{{base_url}}"],
+							"path": ["bonding-curve", "{{sample_token_address}}", "reserves"]
+						}
+					}
+				},
+				{
+					"name": "Get Bonding Curve Settings",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/bonding-curve/{{sample_token_address}}/settings",
+							"host": ["{{base_url}}"],
+							"path": ["bonding-curve", "{{sample_token_address}}", "settings"]
+						}
+					}
+				},
+				{
+					"name": "Get User Contribution",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/bonding-curve/{{sample_token_address}}/contribution/{{sample_user_address}}",
+							"host": ["{{base_url}}"],
+							"path": ["bonding-curve", "{{sample_token_address}}", "contribution", "{{sample_user_address}}"]
+						}
+					}
+				},
+				{
+					"name": "Calculate Price Impact",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/bonding-curve/{{sample_token_address}}/price-impact?ethAmount=1.0&tradeType=buy",
+							"host": ["{{base_url}}"],
+							"path": ["bonding-curve", "{{sample_token_address}}", "price-impact"],
+							"query": [
+								{
+									"key": "ethAmount",
+									"value": "1.0"
+								},
+								{
+									"key": "tradeType",
+									"value": "buy",
+									"description": "buy or sell"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Active Bonding Curves",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/bonding-curve/active",
+							"host": ["{{base_url}}"],
+							"path": ["bonding-curve", "active"]
+						}
+					}
+				},
+				{
+					"name": "Get Finalized Bonding Curves",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/bonding-curve/finalized",
+							"host": ["{{base_url}}"],
+							"path": ["bonding-curve", "finalized"]
+						}
+					}
+				},
+				{
+					"name": "Get Bonding Curve Statistics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/bonding-curve/stats",
+							"host": ["{{base_url}}"],
+							"path": ["bonding-curve", "stats"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "📊 Analytics Endpoints",
+			"item": [
+				{
+					"name": "Get Overview Analytics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/analytics/overview?timeframe=7d&granularity=day",
+							"host": ["{{base_url}}"],
+							"path": ["analytics", "overview"],
+							"query": [
+								{
+									"key": "timeframe",
+									"value": "7d"
+								},
+								{
+									"key": "granularity",
+									"value": "day"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Tokens by Date",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/analytics/tokens-by-date?startDate=2024-01-01&endDate=2024-01-31&granularity=day",
+							"host": ["{{base_url}}"],
+							"path": ["analytics", "tokens-by-date"],
+							"query": [
+								{
+									"key": "startDate",
+									"value": "2024-01-01"
+								},
+								{
+									"key": "endDate",
+									"value": "2024-01-31"
+								},
+								{
+									"key": "granularity",
+									"value": "day"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Volume by Date",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/analytics/volume-by-date?startDate=2024-01-01&endDate=2024-01-31",
+							"host": ["{{base_url}}"],
+							"path": ["analytics", "volume-by-date"],
+							"query": [
+								{
+									"key": "startDate",
+									"value": "2024-01-01"
+								},
+								{
+									"key": "endDate",
+									"value": "2024-01-31"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Top Performers",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/analytics/top-performers?timeframe=7d&limit=10&metric=volume",
+							"host": ["{{base_url}}"],
+							"path": ["analytics", "top-performers"],
+							"query": [
+								{
+									"key": "timeframe",
+									"value": "7d"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "metric",
+									"value": "volume"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Phase Transition Analytics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/analytics/phase-transition?timeframe=30d",
+							"host": ["{{base_url}}"],
+							"path": ["analytics", "phase-transition"],
+							"query": [
+								{
+									"key": "timeframe",
+									"value": "30d"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Market Metrics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/analytics/market-metrics?timeframe=24h",
+							"host": ["{{base_url}}"],
+							"path": ["analytics", "market-metrics"],
+							"query": [
+								{
+									"key": "timeframe",
+									"value": "24h"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get User Behavior Analytics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/analytics/user-behavior?timeframe=7d",
+							"host": ["{{base_url}}"],
+							"path": ["analytics", "user-behavior"],
+							"query": [
+								{
+									"key": "timeframe",
+									"value": "7d"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "🔧 Admin Endpoints",
+			"item": [
+				{
+					"name": "Get Admin Dashboard",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-Admin-Password",
+								"value": "{{admin_password}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/admin/dashboard",
+							"host": ["{{base_url}}"],
+							"path": ["admin", "dashboard"]
+						}
+					}
+				},
+				{
+					"name": "Get Current Factory Settings",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-Admin-Password",
+								"value": "{{admin_password}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/admin/settings",
+							"host": ["{{base_url}}"],
+							"path": ["admin", "settings"]
+						}
+					}
+				},
+				{
+					"name": "Update Deployment Fee",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-Admin-Password",
+								"value": "{{admin_password}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"fee\": \"0.002\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/settings/deployment-fee",
+							"host": ["{{base_url}}"],
+							"path": ["admin", "settings", "deployment-fee"]
+						}
+					}
+				},
+				{
+					"name": "Update Bonding Curve Settings",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-Admin-Password",
+								"value": "{{admin_password}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"virtualEth\": \"2.0\",\n  \"preBondingTarget\": \"0.4\",\n  \"bondingTarget\": \"50.0\",\n  \"minContribution\": \"0.00023\",\n  \"poolFee\": 3000,\n  \"sellFee\": 200,\n  \"uniswapV3Factory\": \"0x1F98431c8aD98523631AE4a59f267346ea31F984\",\n  \"positionManager\": \"0xC36442b4a4522E871399CD717aBDD847Ab11FE88\",\n  \"weth\": \"0x4200000000000000000000000000000000000006\",\n  \"feeTo\": \"0x8a487fC410689D799246fB373F15CF66CEF135f6\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/settings/bonding-curve",
+							"host": ["{{base_url}}"],
+							"path": ["admin", "settings", "bonding-curve"]
+						}
+					}
+				},
+				{
+					"name": "Withdraw Collected Fees",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-Admin-Password",
+								"value": "{{admin_password}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"recipient\": \"0x8b3CA5BaB7E1ff6092F30F4063a3305bf3983a7c\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/withdraw-fees",
+							"host": ["{{base_url}}"],
+							"path": ["admin", "withdraw-fees"]
+						}
+					}
+				},
+				{
+					"name": "Get All Tokens (Admin View)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-Admin-Password",
+								"value": "{{admin_password}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/admin/tokens?page=1&limit=50&status=all&sortBy=createdAt&sortOrder=desc",
+							"host": ["{{base_url}}"],
+							"path": ["admin", "tokens"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "50"
+								},
+								{
+									"key": "status",
+									"value": "all"
+								},
+								{
+									"key": "sortBy",
+									"value": "createdAt"
+								},
+								{
+									"key": "sortOrder",
+									"value": "desc"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Update Token Status",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-Admin-Password",
+								"value": "{{admin_password}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"isActive\": false,\n  \"reason\": \"Violation of terms\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/tokens/{{sample_token_address}}/status",
+							"host": ["{{base_url}}"],
+							"path": ["admin", "tokens", "{{sample_token_address}}", "status"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Analytics",
+			"item": [
+				{
+					"name": "Get Platform Overview",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/analytics/overview",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "analytics", "overview"]
+						}
+					}
+				},
+				{
+					"name": "Get Creation Timeline",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/analytics/creation-timeline?period=7d",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "analytics", "creation-timeline"],
+							"query": [
+								{
+									"key": "period",
+									"value": "7d"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Volume Analysis", 
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/analytics/volume?period=24h",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "analytics", "volume"],
+							"query": [
+								{
+									"key": "period",
+									"value": "24h"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Performance Metrics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/analytics/performance",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "analytics", "performance"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Trading",
+			"item": [
+				{
+					"name": "Buy Tokens",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"ethAmount\": 0.1,\n  \"minTokens\": 950,\n  \"slippage\": 2.5,\n  \"privateKey\": \"your_private_key_here\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/trading/buy/{{bondingCurveAddress}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trading", "buy", "{{bondingCurveAddress}}"]
+						}
+					}
+				},
+				{
+					"name": "Sell Tokens",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"tokenAmount\": 1000,\n  \"slippage\": 2.5,\n  \"privateKey\": \"your_private_key_here\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/trading/sell/{{bondingCurveAddress}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trading", "sell", "{{bondingCurveAddress}}"]
+						}
+					}
+				},
+				{
+					"name": "Get Buy Quote",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/trading/quote/buy/{{bondingCurveAddress}}?ethAmount=0.1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trading", "quote", "buy", "{{bondingCurveAddress}}"],
+							"query": [
+								{
+									"key": "ethAmount",
+									"value": "0.1"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Sell Quote",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/trading/quote/sell/{{bondingCurveAddress}}?tokenAmount=1000",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trading", "quote", "sell", "{{bondingCurveAddress}}"],
+							"query": [
+								{
+									"key": "tokenAmount",
+									"value": "1000"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get User Token Balance",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/trading/balance/{{tokenAddress}}/{{userAddress}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trading", "balance", "{{tokenAddress}}", "{{userAddress}}"]
+						}
+					}
+				},
+				{
+					"name": "Get Trading History",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/trading/history/{{bondingCurveAddress}}?limit=20&offset=0",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trading", "history", "{{bondingCurveAddress}}"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "20"
+								},
+								{
+									"key": "offset",
+									"value": "0"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get User Trading History",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/trading/history/{{bondingCurveAddress}}/user/{{userAddress}}?limit=20&offset=0",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trading", "history", "{{bondingCurveAddress}}", "user", "{{userAddress}}"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "20"
+								},
+								{
+									"key": "offset",
+									"value": "0"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Recent Trades",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/trading/recent/{{bondingCurveAddress}}?count=10",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trading", "recent", "{{bondingCurveAddress}}"],
+							"query": [
+								{
+									"key": "count",
+									"value": "10"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Token Allowance",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/trading/allowance/{{tokenAddress}}/{{userAddress}}/{{spenderAddress}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trading", "allowance", "{{tokenAddress}}", "{{userAddress}}", "{{spenderAddress}}"]
+						}
+					}
+				},
+				{
+					"name": "Approve Tokens",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"spenderAddress\": \"0x123636d578b275910474a48a22cd86f3de0738a2\",\n  \"amount\": 10000000,\n  \"privateKey\": \"your_private_key_here\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/trading/approve/{{tokenAddress}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trading", "approve", "{{tokenAddress}}"]
+						}
+					}
+				}
+			]
+		}
+	]
+} 

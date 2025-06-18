@@ -1,0 +1,20 @@
+{
+  "chainId": 11124,
+  "name": "Abstract Testnet",
+  "rpcUrl": "https://api.testnet.abs.xyz",
+  "explorerUrl": "https://sepolia.abscan.org",
+  "testnet": true,
+  "uniswapV3": {
+    "factory": "0xA1160e73B63F322ae88cC2d8E700833e71D0b2a1",
+    "positionManager": "0xfA928D3ABc512383b8E5E77edd2d5678696084F9",
+    "quoterV2": "0x117Fc8DEf58147016f92bAE713533dDB828aBB7e",
+    "swapRouter02": "0x2cB10Ac97F2C3dAEDEaB7b72DbaEb681891f51B8"
+  },
+  "weth": "0x4200000000000000000000000000000000000006",
+  "defaultFee": 3000,
+  "deploymentSettings": {
+    "initialDeploymentFee": "0.0001",
+    "gasLimit": "10000000",
+    "gasPrice": "0.01"
+  }
+} 
