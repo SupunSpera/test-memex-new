@@ -1,9 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAccount } from 'wagmi';
-import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { ethers } from 'ethers';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
@@ -48,11 +47,12 @@ export default function TokensPage() {
   const [error, setError] = useState<string | null>(null);
   const { isConnected } = useAccount();
   const router = useRouter();
+  const pathname = usePathname();
 
   // Function to fetch tokens from backend API
   const fetchTokensFromAPI = async (): Promise<TokenInfo[]> => {
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5004/api';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
       const response = await fetch(`${apiUrl}/tokens`);
       
       if (!response.ok) {
@@ -122,7 +122,56 @@ export default function TokensPage() {
     };
 
     loadTokens();
-  }, []);
+
+    // Add event listener to refresh tokens when window gains focus
+    const handleFocus = () => {
+      console.log('Window focused, refreshing tokens...');
+      loadTokens();
+    };
+
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [pathname]); // Add pathname to trigger reload on route changes
+
+  // Manual refresh function
+  const refreshTokens = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      let tokensData: TokenInfo[] = [];
+      
+      // First, try to fetch from backend API
+      try {
+        tokensData = await fetchTokensFromAPI();
+        console.log(`Refreshed ${tokensData.length} tokens from backend API`);
+        toast.success('Tokens refreshed successfully!');
+      } catch (apiError) {
+        console.error('Failed to fetch tokens from API:', apiError);
+        
+        // If API fails, try localStorage
+        tokensData = getTokensFromLocalStorage();
+        console.log(`Refreshed ${tokensData.length} tokens from localStorage`);
+        
+        if (tokensData.length > 0) {
+          toast.error('Backend API unavailable, showing cached tokens');
+        } else {
+          setError('Unable to load tokens. Please ensure the backend server is running or create a new token.');
+        }
+      }
+      
+      setTokens(tokensData);
+    } catch (error) {
+      console.error('Error refreshing tokens:', error);
+      setError('Failed to refresh tokens');
+      toast.error('Failed to refresh tokens');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const formatAddress = (address: string | undefined) => {
     if (!address) return 'Unknown';
@@ -165,13 +214,22 @@ export default function TokensPage() {
             </p>
           </div>
           <div className="flex items-center space-x-4">
+            <button
+              onClick={refreshTokens}
+              disabled={loading}
+              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+            >
+              <svg className={`-ml-1 mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              {loading ? 'Refreshing...' : 'Refresh'}
+            </button>
             <Link
               href="/create"
               className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
             >
               Create Token
             </Link>
-            <ConnectButton />
           </div>
         </div>
 
@@ -191,7 +249,7 @@ export default function TokensPage() {
                 <div className="mt-4">
                   <div className="-mx-2 -my-1.5 flex">
                     <button
-                      onClick={() => window.location.reload()}
+                      onClick={refreshTokens}
                       className="bg-red-50 px-2 py-1.5 rounded-md text-sm font-medium text-red-800 hover:bg-red-100"
                     >
                       Try Again

@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useAccount, useSigner } from 'wagmi';
-import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useRouter, useParams } from 'next/navigation';
 import { ethers } from 'ethers';
 import toast from 'react-hot-toast';
@@ -47,6 +46,7 @@ interface TokenInfo {
   deploymentTxHash: string;
   deploymentBlockNumber: number;
   owner: string;
+  isFinalized?: boolean;
   // Backend fields
   _id?: string;
   totalETHCollected?: string;
@@ -99,12 +99,21 @@ export default function TokenPage() {
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isFinalized, setIsFinalized] = useState<boolean>(false);
-  const [bondingCurveSettings, setBondingCurveSettings] = useState<any>(null);
+  const [buyLoading, setBuyLoading] = useState(false);
+  const [sellLoading, setSellLoading] = useState(false);
+  
+  // Bonding curve progress state
+  const [bondingProgress, setBondingProgress] = useState({
+    totalETHCollected: '0',
+    bondingTarget: '0',
+    progressPercentage: 0,
+    remainingETH: '0'
+  });
 
   // Function to fetch token from backend API
   const fetchTokenFromAPI = async (tokenAddress: string): Promise<TokenInfo | null> => {
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5004/api';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
       const response = await fetch(`${apiUrl}/tokens`);
       
       if (!response.ok) {
@@ -140,6 +149,37 @@ export default function TokenPage() {
     } catch (error) {
       console.error('Error parsing localStorage tokens:', error);
       return null;
+    }
+  };
+
+  // Function to update bonding curve progress
+  const updateBondingProgress = async (bondingCurveContract: ethers.Contract) => {
+    try {
+      const [totalETHCollected, settings] = await Promise.all([
+        bondingCurveContract.totalETHCollected(),
+        bondingCurveContract.getBondingCurveSettings()
+      ]);
+
+      const collected = parseFloat(ethers.utils.formatEther(totalETHCollected));
+      const target = parseFloat(ethers.utils.formatEther(settings.bondingTarget));
+      const progressPercentage = target > 0 ? Math.min((collected / target) * 100, 100) : 0;
+      const remaining = Math.max(target - collected, 0);
+
+      setBondingProgress({
+        totalETHCollected: collected.toFixed(4),
+        bondingTarget: target.toFixed(4),
+        progressPercentage: progressPercentage,
+        remainingETH: remaining.toFixed(4)
+      });
+
+      console.log('Bonding curve progress updated:', {
+        collected: collected.toFixed(4),
+        target: target.toFixed(4),
+        progress: progressPercentage.toFixed(2) + '%',
+        remaining: remaining.toFixed(4)
+      });
+    } catch (error) {
+      console.error('Error updating bonding progress:', error);
     }
   };
 
@@ -212,14 +252,18 @@ export default function TokenPage() {
         setEthBalance(ethers.utils.formatEther(ethBalance));
 
         // Get current price using reserves
-        const [ethReserve, tokenSupply] = await Promise.all([
+        const [ethReserve, tokenReserve] = await Promise.all([
           bondingCurveContract.ethReserve(),
-          tokenContract.totalSupply()
+          bondingCurveContract.tokenReserve()
         ]);
         
+        console.log("=== BONDING CURVE CALCULATION ===");
+        console.log("ETH Reserve:", ethers.utils.formatEther(ethReserve));
+        console.log("Token Reserve:", ethers.utils.formatEther(tokenReserve));
+        
         // Calculate price based on the bonding curve formula
-        if (tokenSupply.gt(0) && ethReserve.gt(0)) {
-          const calculatedPrice = ethReserve.mul(ethers.utils.parseEther('1')).div(tokenSupply);
+        if (tokenReserve.gt(0) && ethReserve.gt(0)) {
+          const calculatedPrice = ethReserve.mul(ethers.utils.parseEther('1')).div(tokenReserve);
           setPrice(ethers.utils.formatEther(calculatedPrice));
         } else {
           setPrice('0');
@@ -229,23 +273,8 @@ export default function TokenPage() {
         const finalized = await bondingCurveContract.isFinalized();
         setIsFinalized(finalized);
 
-        // Get bonding curve settings
-        try {
-          const settings = await bondingCurveContract.getBondingCurveSettings();
-          setBondingCurveSettings({
-            virtualEth: settings.virtualEth,
-            bondingTarget: settings.bondingTarget,
-            minContribution: settings.minContribution,
-            poolFee: settings.poolFee,
-            sellFee: settings.sellFee,
-            uniswapV3Factory: settings.uniswapV3Factory,
-            positionManager: settings.positionManager,
-            weth: settings.weth,
-            feeTo: settings.feeTo
-          });
-        } catch (settingsError) {
-          console.error("Error fetching bonding curve settings:", settingsError);
-        }
+        // Update bonding curve progress
+        await updateBondingProgress(bondingCurveContract);
 
         // Load transaction history
         const buyEvents = await bondingCurveContract.queryFilter(
@@ -303,12 +332,15 @@ export default function TokenPage() {
       return;
     }
 
-    if (isFinalized) {
-      toast.error('Token has been finalized. No more tokens can be purchased.');
+    if (token?.isFinalized) {
+      toast.error('This token has been finalized and can no longer be traded on the bonding curve');
       return;
     }
 
+    setBuyLoading(true);
+    
     try {
+      // Create contract instances
       const bondingCurveContract = new ethers.Contract(
         token.bondingCurveAddress,
         BONDING_CURVE_ABI,
@@ -321,104 +353,108 @@ export default function TokenPage() {
         signer
       );
 
-      const ethValue = ethers.utils.parseEther(buyAmount);
+      // Get current reserves and settings for calculation
+      const ethReserve = await bondingCurveContract.ethReserve();
+      const tokenReserve = await bondingCurveContract.tokenReserve();
+      const settings = await bondingCurveContract.getBondingCurveSettings();
       
-      // Validate minimum contribution if settings are available
-      if (bondingCurveSettings && bondingCurveSettings.minContribution) {
-        if (ethValue.lt(bondingCurveSettings.minContribution)) {
-          const minContributionEth = ethers.utils.formatEther(bondingCurveSettings.minContribution);
-          toast.error(`Minimum contribution is ${minContributionEth} ETH`);
-          return;
-        }
-      }
-      
-      // Get current reserves for price calculation
-      const [ethReserve, tokenSupply] = await Promise.all([
-        bondingCurveContract.ethReserve(),
-        tokenContract.totalSupply()
-      ]);
-      
-      // Calculate minimum tokens to receive (with 5% slippage protection)
-      let minTokens = ethers.BigNumber.from('0');
-      
-      if (ethReserve.gt(0) && tokenSupply.gt(0)) {
-        const expectedTokens = ethValue.mul(tokenSupply).div(ethReserve.add(ethValue));
-        minTokens = expectedTokens.mul(95).div(100); // 5% slippage
-      }
-      
-      const tx = await bondingCurveContract.buyTokens(minTokens, {
-        value: ethValue,
-        gasLimit: 500000
+      console.log('Current state:', {
+        ethReserve: ethers.utils.formatEther(ethReserve),
+        tokenReserve: ethers.utils.formatEther(tokenReserve),
+        minContribution: ethers.utils.formatEther(settings.minContribution)
       });
+
+      const ethAmount = ethers.utils.parseEther(buyAmount);
       
-      toast.loading('Buying tokens...', { id: 'buy' });
+      // Check minimum contribution
+      if (ethAmount.lt(settings.minContribution)) {
+        toast.error(`Minimum contribution is ${ethers.utils.formatEther(settings.minContribution)} ETH`);
+        setBuyLoading(false);
+        return;
+      }
+
+      // Calculate expected tokens using bonding curve formula
+      const virtualEth = settings.virtualEth;
+      const k = ethReserve.mul(tokenReserve);
+      const projectedEthReserve = ethReserve.add(ethAmount);
+      const projectedTokenReserve = k.div(projectedEthReserve);
+      const tokensToReceive = tokenReserve.sub(projectedTokenReserve);
+      
+      console.log('Buy calculation:', {
+        ethAmount: ethers.utils.formatEther(ethAmount),
+        virtualEth: ethers.utils.formatEther(virtualEth),
+        expectedTokens: ethers.utils.formatEther(tokensToReceive),
+        k: ethers.utils.formatEther(k)
+      });
+
+      // Add 1% slippage protection - reduce minimum by 1%
+      const minTokens = tokensToReceive.mul(99).div(100);
+      
+      console.log('Transaction params:', {
+        ethValue: ethers.utils.formatEther(ethAmount),
+        minTokens: ethers.utils.formatEther(minTokens),
+        minTokensWei: minTokens.toString()
+      });
+
+      toast.loading('Transaction submitted, waiting for confirmation...', { id: 'buy' });
+
+      // Call buyTokens with only minTokens parameter
+      const tx = await bondingCurveContract.buyTokens(minTokens, {
+        value: ethAmount,
+        gasLimit: 2000000
+      });
+
+      console.log('Transaction hash:', tx.hash);
       
       const receipt = await tx.wait();
-      
-      if (receipt.status === 0) {
-        throw new Error('Transaction failed');
-      }
-      
+      console.log('Transaction confirmed:', receipt);
+
       toast.dismiss('buy');
       toast.success('Tokens purchased successfully!');
       
-      // Refresh balances and price
-      try {
-        const [balance, newEthReserve, newTokenSupply, newFinalized] = await Promise.all([
-          tokenContract.balanceOf(await signer.getAddress()),
-          bondingCurveContract.ethReserve(),
-          tokenContract.totalSupply(),
-          bondingCurveContract.isFinalized()
-        ]);
-        
-        setTokenBalance(ethers.utils.formatEther(balance));
-        setIsFinalized(newFinalized);
-        
-        // Calculate price if we have reserves
-        if (newEthReserve.gt(0) && newTokenSupply.gt(0)) {
-          const currentPrice = newEthReserve.mul(ethers.utils.parseEther('1')).div(newTokenSupply);
-          setPrice(ethers.utils.formatEther(currentPrice));
-        }
-        
-        const ethBalance = await signer.getBalance();
-        setEthBalance(ethers.utils.formatEther(ethBalance));
-        
-        // Show finalization message if it happened
-        if (newFinalized && !isFinalized) {
-          toast.success('Token has been finalized and migrated to DEX!');
-        }
-        
-      } catch (refreshError) {
-        console.error('Error refreshing data:', refreshError);
-        // Don't show error to user since the transaction succeeded
+      // Refresh balances and data
+      const [balance, newEthReserve, newTokenReserve, newFinalized] = await Promise.all([
+        tokenContract.balanceOf(await signer.getAddress()),
+        bondingCurveContract.ethReserve(),
+        bondingCurveContract.tokenReserve(),
+        bondingCurveContract.isFinalized()
+      ]);
+      
+      setTokenBalance(ethers.utils.formatEther(balance));
+      setIsFinalized(newFinalized);
+      
+      // Calculate price if we have reserves
+      if (newEthReserve.gt(0) && newTokenReserve.gt(0)) {
+        const currentPrice = newEthReserve.mul(ethers.utils.parseEther('1')).div(newTokenReserve);
+        setPrice(ethers.utils.formatEther(currentPrice));
       }
       
-      setBuyAmount('');
+      const ethBalance = await signer.getBalance();
+      setEthBalance(ethers.utils.formatEther(ethBalance));
       
+      // Update bonding curve progress after successful buy
+      await updateBondingProgress(bondingCurveContract);
+      
+      setBuyAmount('');
     } catch (error: any) {
       toast.dismiss('buy');
       console.error('Buy error:', error);
       
-      // Handle specific error cases
-      if (error.message.includes('execution reverted')) {
-        if (error.message.includes('InsufficientETH')) {
-          toast.error('Insufficient testnet ETH. Please get some from the Abstract Sepolia faucet.');
-        } else if (error.message.includes('ContributionTooLow')) {
-          toast.error('Contribution amount is too low. Please increase the amount.');
-        } else if (error.message.includes('SlippageExceeded')) {
-          toast.error('Price slippage too high. Please try again with a smaller amount.');
-        } else if (error.message.includes('BondingTargetReached')) {
-          toast.error('Bonding target reached. Token is being finalized.');
-        } else {
-          toast.error('Transaction failed. Please check if you have enough testnet ETH and try again.');
-        }
-      } else if (error.message.includes('insufficient funds')) {
-        toast.error('Insufficient testnet ETH. Please get some from the Abstract Sepolia faucet.');
-      } else if (error.message.includes('user rejected transaction')) {
-        toast.error('Transaction was cancelled.');
-      } else {
-        toast.error(error.message || 'Failed to buy tokens');
+      let errorMessage = 'Failed to buy tokens';
+      
+      if (error.code === 'INSUFFICIENT_FUNDS') {
+        errorMessage = 'Insufficient ETH balance';
+      } else if (error.message?.includes('user rejected')) {
+        errorMessage = 'Transaction rejected by user';
+      } else if (error.message?.includes('minContribution')) {
+        errorMessage = 'Amount below minimum contribution requirement';
+      } else if (error.message?.includes('revert')) {
+        errorMessage = 'Transaction reverted - possibly due to slippage or insufficient liquidity';
       }
+      
+      toast.error(errorMessage);
+    } finally {
+      setBuyLoading(false);
     }
   };
 
@@ -429,15 +465,17 @@ export default function TokenPage() {
     }
 
     if (!sellAmount || parseFloat(sellAmount) <= 0) {
-      toast.error('Please enter a valid amount');
+      toast.error('Please enter a valid amount to sell');
       return;
     }
 
     if (isFinalized) {
-      toast.error('Token has been finalized. Please use a DEX for trading.');
+      toast.error('Token has been finalized. Please trade on DEX.');
       return;
     }
 
+    setSellLoading(true);
+    
     try {
       const bondingCurveContract = new ethers.Contract(
         token.bondingCurveAddress,
@@ -445,53 +483,156 @@ export default function TokenPage() {
         signer
       );
 
-      const amount = ethers.utils.parseEther(sellAmount);
-      const tx = await bondingCurveContract.sellTokens(
-        amount,
-        0, // minimum ETH (can be enhanced with slippage protection)
-        { gasLimit: 500000 }
-      );
-      
-      toast.loading('Selling tokens...', { id: 'sell' });
-      await tx.wait();
-      
-      toast.dismiss('sell');
-      toast.success('Tokens sold successfully!');
-      
-      // Refresh balances and price
       const tokenContract = new ethers.Contract(
         token.tokenAddress,
         TOKEN_ABI,
         signer
       );
+
+      const amount = ethers.utils.parseEther(sellAmount);
       
-      const [balance, ethReserve, tokenSupply] = await Promise.all([
-        tokenContract.balanceOf(await signer.getAddress()),
-        bondingCurveContract.ethReserve(),
-        tokenContract.totalSupply()
-      ]);
+      console.log("=== SELLING TOKENS ===");
+      console.log("Selling amount:", ethers.utils.formatEther(amount));
       
-      if (ethReserve.gt(0) && tokenSupply.gt(0)) {
-        const currentPrice = ethReserve.mul(ethers.utils.parseEther('1')).div(tokenSupply);
-        setPrice(ethers.utils.formatEther(currentPrice));
+      // Check if user has enough tokens
+      const userAddress = await signer.getAddress();
+      const userBalance = await tokenContract.balanceOf(userAddress);
+      console.log("User token balance:", ethers.utils.formatEther(userBalance));
+      
+      if (amount.gt(userBalance)) {
+        toast.error('Insufficient token balance');
+        return;
       }
       
-      setTokenBalance(ethers.utils.formatEther(balance));
+      // Check current allowance
+      const currentAllowance = await tokenContract.allowance(userAddress, token.bondingCurveAddress);
+      console.log("Current allowance:", ethers.utils.formatEther(currentAllowance));
       
-      const ethBalance = await signer.getBalance();
-      setEthBalance(ethers.utils.formatEther(ethBalance));
+      // If allowance is insufficient, approve tokens for sale
+      if (currentAllowance.lt(amount)) {
+        console.log("Approving tokens for sale...");
+        toast.loading('Approving tokens...', { id: 'approve' });
+        
+        const approveTx = await tokenContract.approve(token.bondingCurveAddress, amount);
+        await approveTx.wait();
+        
+        toast.dismiss('approve');
+        toast.success('Tokens approved for sale');
+        console.log("Tokens approved successfully");
+      }
+      
+      // Get contract settings and current reserves for minimum ETH check
+      const [settings, ethReserve, tokenReserve] = await Promise.all([
+        bondingCurveContract.getBondingCurveSettings(),
+        bondingCurveContract.ethReserve(),
+        bondingCurveContract.tokenReserve()
+      ]);
+      
+      console.log("ETH Reserve:", ethers.utils.formatEther(ethReserve));
+      console.log("Token Reserve:", ethers.utils.formatEther(tokenReserve));
+      console.log("Min Contribution:", ethers.utils.formatEther(settings.minContribution));
+      
+      // Calculate expected ETH output using bonding curve formula
+      let minEthOut = ethers.BigNumber.from('0');
+      
+      if (ethReserve.gt(0) && tokenReserve.gt(0)) {
+        // Correct bonding curve formula for selling: ethOut = (tokensIn * ethReserve) / (tokenReserve + tokensIn)
+        const numerator = amount.mul(ethReserve);
+        const denominator = tokenReserve.add(amount);
+        const expectedEth = numerator.div(denominator);
+        
+        console.log("Expected ETH calculation:");
+        console.log("- Numerator (tokensIn * ethReserve):", ethers.utils.formatEther(numerator));
+        console.log("- Denominator (tokenReserve + tokensIn):", ethers.utils.formatEther(denominator));
+        console.log("- Expected ETH:", ethers.utils.formatEther(expectedEth));
+        
+        // Use 98% of expected ETH (2% slippage tolerance)
+        minEthOut = expectedEth.mul(98).div(100);
+        console.log("minEthOut (98% of expected):", ethers.utils.formatEther(minEthOut));
+        
+        // Safety check: ensure minEthOut doesn't exceed available ETH reserve
+        if (minEthOut.gt(ethReserve)) {
+          console.log("WARNING: minEthOut exceeds ETH reserve, adjusting...");
+          minEthOut = ethReserve.mul(98).div(100); // Use 98% of available ETH
+          console.log("Adjusted minEthOut:", ethers.utils.formatEther(minEthOut));
+        }
+      }
+      
+      // Execute the sell transaction
+      console.log("Executing sellTokens with amount:", ethers.utils.formatEther(amount));
+      console.log("Minimum ETH out:", ethers.utils.formatEther(minEthOut));
+      
+      const tx = await bondingCurveContract.sellTokens(amount, minEthOut, {
+        gasLimit: 500000
+      });
+      
+      toast.loading('Selling tokens...', { id: 'sell' });
+      
+      const receipt = await tx.wait();
+      
+      if (receipt.status === 0) {
+        throw new Error('Transaction failed');
+      }
+      
+      toast.dismiss('sell');
+      toast.success('Tokens sold successfully!');
+      
+      // Refresh balances and price
+      try {
+        const [newBalance, newEthReserve, newTokenReserve, newFinalized] = await Promise.all([
+          tokenContract.balanceOf(userAddress),
+          bondingCurveContract.ethReserve(),
+          bondingCurveContract.tokenReserve(),
+          bondingCurveContract.isFinalized()
+        ]);
+        
+        setTokenBalance(ethers.utils.formatEther(newBalance));
+        setIsFinalized(newFinalized);
+        
+        // Calculate price if we have reserves
+        if (newEthReserve.gt(0) && newTokenReserve.gt(0)) {
+          const currentPrice = newEthReserve.mul(ethers.utils.parseEther('1')).div(newTokenReserve);
+          setPrice(ethers.utils.formatEther(currentPrice));
+        }
+        
+        const ethBalance = await signer.getBalance();
+        setEthBalance(ethers.utils.formatEther(ethBalance));
+        
+        // Update bonding curve progress after successful sell
+        await updateBondingProgress(bondingCurveContract);
+        
+      } catch (refreshError) {
+        console.error('Error refreshing data:', refreshError);
+        // Don't show error to user since the transaction succeeded
+      }
       
       setSellAmount('');
+      
     } catch (error: any) {
       toast.dismiss('sell');
+      toast.dismiss('approve');
       console.error('Sell error:', error);
+      
+      // Handle specific error cases
       if (error.message.includes('execution reverted')) {
-        toast.error('Transaction failed. Please check your token balance and try again.');
+        if (error.message.includes('InsufficientTokens')) {
+          toast.error('Insufficient token balance');
+        } else if (error.message.includes('SlippageExceeded')) {
+          toast.error('Price slippage too high. Please try again with a smaller amount.');
+        } else if (error.message.includes('InsufficientLiquidity')) {
+          toast.error('Insufficient liquidity for this trade size');
+        } else {
+          toast.error('Transaction failed. Please try again.');
+        }
       } else if (error.message.includes('insufficient funds')) {
-        toast.error('Insufficient testnet ETH for gas. Please get some from the Abstract Sepolia faucet.');
+        toast.error('Insufficient ETH for gas fees');
+      } else if (error.message.includes('user rejected transaction')) {
+        toast.error('Transaction was cancelled');
       } else {
         toast.error(error.message || 'Failed to sell tokens');
       }
+    } finally {
+      setSellLoading(false);
     }
   };
 
@@ -586,7 +727,6 @@ export default function TokenPage() {
           >
             ← Back to Tokens
           </button>
-          <ConnectButton />
         </div>
 
         <div className="bg-white shadow rounded-lg overflow-hidden">
@@ -656,6 +796,62 @@ export default function TokenPage() {
               ))}
             </div>
 
+            {/* Bonding Curve Progress Bar */}
+            {!isFinalized && (
+              <div className="mt-6 bg-gradient-to-r from-indigo-50 to-purple-50 p-6 rounded-lg border border-indigo-200">
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="text-lg font-semibold text-gray-900">Bonding Curve Progress</h3>
+                  <span className="text-sm font-medium text-indigo-600">
+                    {bondingProgress.progressPercentage.toFixed(1)}%
+                  </span>
+                </div>
+                
+                <div className="w-full bg-gray-200 rounded-full h-4 mb-4 overflow-hidden">
+                  <div 
+                    className="bg-gradient-to-r from-indigo-500 to-purple-600 h-4 rounded-full transition-all duration-500 ease-out shadow-sm"
+                    style={{ width: `${Math.min(bondingProgress.progressPercentage, 100)}%` }}
+                  >
+                    <div className="h-full bg-gradient-to-r from-white/20 to-transparent rounded-full"></div>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+                  <div className="text-center">
+                    <p className="text-gray-600 mb-1">ETH Collected</p>
+                    <p className="font-semibold text-indigo-600">
+                      {bondingProgress.totalETHCollected} ETH
+                    </p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-gray-600 mb-1">Target</p>
+                    <p className="font-semibold text-gray-900">
+                      {bondingProgress.bondingTarget} ETH
+                    </p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-gray-600 mb-1">Remaining</p>
+                    <p className="font-semibold text-orange-600">
+                      {bondingProgress.remainingETH} ETH
+                    </p>
+                  </div>
+                </div>
+                
+                {bondingProgress.progressPercentage >= 100 ? (
+                  <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <p className="text-sm text-green-800 font-medium">
+                      🎉 Bonding curve target reached! This token is ready for finalization.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-sm text-blue-800">
+                      💡 Once the target is reached, this token will be finalized and migrated to a DEX with liquidity.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
               <div className="bg-gray-50 p-4 rounded-lg">
                 <h3 className="text-lg font-medium text-gray-900">
@@ -675,10 +871,16 @@ export default function TokenPage() {
                   />
                   <button
                     onClick={handleBuy}
-                    disabled={!isConnected || !buyAmount || isFinalized}
+                    disabled={!isConnected || !buyAmount || isFinalized || buyLoading}
                     className="mt-4 w-full inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-gray-400"
                   >
-                    {isFinalized ? 'Trading Ended' : 'Buy Tokens'}
+                    {buyLoading && (
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    )}
+                    {buyLoading ? 'Buying...' : isFinalized ? 'Trading Ended' : 'Buy Tokens'}
                   </button>
                   {isFinalized && (
                     <p className="mt-2 text-xs text-gray-600">
@@ -706,10 +908,16 @@ export default function TokenPage() {
                   />
                   <button
                     onClick={handleSell}
-                    disabled={!isConnected || !sellAmount || isFinalized}
+                    disabled={!isConnected || !sellAmount || isFinalized || sellLoading}
                     className="mt-4 w-full inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-gray-400"
                   >
-                    {isFinalized ? 'Use DEX' : 'Sell Tokens'}
+                    {sellLoading && (
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    )}
+                    {sellLoading ? 'Selling...' : isFinalized ? 'Use DEX' : 'Sell Tokens'}
                   </button>
                   {isFinalized && (
                     <p className="mt-2 text-xs text-gray-600">
@@ -759,15 +967,6 @@ export default function TokenPage() {
                 </div>
               </div>
             </div>
-
-            {/* Minimum Contribution Info */}
-            {bondingCurveSettings && !isFinalized && (
-              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-sm text-blue-800">
-                  <strong>Minimum contribution:</strong> {ethers.utils.formatEther(bondingCurveSettings.minContribution)} ETH
-                </p>
-              </div>
-            )}
 
             <div className="mt-6">
               <h3 className="text-lg font-medium text-gray-900">Links</h3>
@@ -832,21 +1031,21 @@ export default function TokenPage() {
                             <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                               tx.type === 'Buy' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                             }`}>
-                              {tx.type.toUpperCase()}
+                              {tx.type}
                             </span>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {tx.amount} {token?.symbol}
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {parseFloat(tx.amount).toFixed(4)} {token.symbol}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {parseFloat(tx.price).toFixed(6)} ETH
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {tx.price} ETH
+                            {new Date(tx.timestamp * 1000).toLocaleDateString()}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {new Date(tx.timestamp * 1000).toLocaleString()}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                             <a
-                              href={`https://explorer.testnet.abs.xyz/tx/${tx.hash}`}
+                              href={`https://sepolia.etherscan.io/tx/${tx.hash}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-indigo-600 hover:text-indigo-900"
@@ -861,9 +1060,19 @@ export default function TokenPage() {
                 </div>
               )}
             </div>
+
+            {/* Price Chart Section */}
+            {priceHistory.length > 0 && (
+              <div className="mt-6">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Price Chart</h3>
+                <div className="bg-white p-4 rounded-lg border">
+                  <Line data={chartData} options={chartOptions} />
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
     </div>
   );
-} 
+}

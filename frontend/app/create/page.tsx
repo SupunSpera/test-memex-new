@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useAccount, useSigner, useNetwork, useSwitchNetwork } from 'wagmi';
-import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { toast } from 'react-hot-toast';
 import { ethers } from 'ethers';
 import { useRouter } from 'next/navigation';
@@ -121,7 +120,7 @@ export default function CreateToken() {
         
         // Try to register token with backend API (non-blocking)
         try {
-          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5004/api';
+          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
           const response = await fetch(`${apiUrl}/user/register-token`, {
             method: 'POST',
             headers: {
@@ -168,10 +167,12 @@ export default function CreateToken() {
           tags: ''
         });
         
-        toast.success(`Token "${formData.name}" created successfully!`);
+        toast.success(`Token "${formData.name}" created successfully! Redirecting to tokens page...`);
         
-        // Redirect to tokens page
-        router.push('/tokens');
+        // Add a small delay to ensure localStorage is saved before redirect
+        setTimeout(() => {
+          router.push('/tokens');
+        }, 1500);
       } else {
         throw new Error('Could not find deployment event in transaction receipt');
       }
@@ -197,10 +198,6 @@ export default function CreateToken() {
             <h3 className="text-lg leading-6 font-medium text-gray-900">Create New Token</h3>
             <div className="mt-2 max-w-xl text-sm text-gray-500">
               <p>Fill in the details below to create your token on Abstract Testnet.</p>
-            </div>
-            
-            <div className="mt-5">
-              <ConnectButton />
             </div>
 
             {isConnected && chain?.id !== ABSTRACT_TESTNET_CHAIN_ID && (

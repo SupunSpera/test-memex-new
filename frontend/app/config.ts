@@ -1,5 +1,5 @@
 export const config = {
-  apiBaseUrl: 'http://localhost:5004/api',
+  apiBaseUrl: 'http://localhost:5001/api',
   chains: {
     mainnet: {
       id: 2741,
@@ -13,11 +13,11 @@ export const config = {
     },
   },
   contracts: {
-    factory: '0xC35BaAf9Ecf96C55ecF11DF18B158fB4c6a646a6',
-    bondingCurve: '0xaB536C5ab009ff8D66f6a42fb3c135a33C40A507',
-    lock: '0x9F6b36b63C6F19AD53A445c85459f7a762433C5f',
-    tokenImplementation: '0xf4b7A5e44B5B5AC2DFA93e98088fc332d4e55538',
-    foundry: '0xD546016e4808669ab906aA1EE98418073dB4123f',
+    factory: '0x52282113f2Aa9A7DA991cCFDb19B8725F3093666',
+    bondingCurve: '0x119784a3eCe7FDC183ED9530eABDfd69FC043A93',
+    lock: '0x19Fc5C62B5Bc7f158615655150E097b85829514E',
+    tokenImplementation: '0xDc9FB01E68F5b27f30b99f05e57b8bC8685fB1a0',
+    foundry: '0x17CffdAeBD5459f914eFf6f3E5a337407d6261e0',
   },
   defaultGasPrice: '20000000000',
   maxGasLimit: '500000',
